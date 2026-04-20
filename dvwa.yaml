@@ -14,6 +14,7 @@ spec:
         app: app2-dvwa
     spec:
       serviceAccountName: app2-sa
+      automountServiceAccountToken: false
       containers:
       - name: dvwa
         image: vulnerables/web-dvwa

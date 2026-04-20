@@ -5,5 +5,5 @@ metadata:
   name: app2-role
 rules:
 - apiGroups: [""]
-  resources: ["pods","secrets"]
+  resources: ["pods"]
   verbs: ["get","list"]
