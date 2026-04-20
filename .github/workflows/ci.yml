@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/franck-laurel/phase1-devsecops/backend
+  IMAGE_FRONTEND: ghcr.io/franck-laurel/phase1-devsecops/frontend
+
 jobs:
   test-backend:
     runs-on: ubuntu-latest
@@ -29,15 +34,37 @@ jobs:
           cd backend
           pytest -v
 
-  build-images:
+  build-and-push:
     runs-on: ubuntu-latest
     needs: test-backend
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build backend image
-        run: docker build -t backend:ci ./backend
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build frontend image
-        run: docker build -t frontend:ci ./frontend
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ghcr.io/franck-laurel/phase1-devsecops/backend:latest
+            ghcr.io/franck-laurel/phase1-devsecops/backend:phase2-ci
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ghcr.io/franck-laurel/phase1-devsecops/frontend:latest
+            ghcr.io/franck-laurel/phase1-devsecops/frontend:phase2-ci
