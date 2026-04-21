@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: frontend:v1
-          imagePullPolicy: Never
+          image: ghcr.io/franck-laurel/phase1-devsecops/frontend:latest
+          imagePullPolicy: Always
           env:
             - name: API_URL
               value: "http://backend:5000"

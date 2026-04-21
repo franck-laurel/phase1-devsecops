@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: backend:v1
-          imagePullPolicy: Never
+          image: ghcr.io/franck-laurel/phase1-devsecops/backend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
