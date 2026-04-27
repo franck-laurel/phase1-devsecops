@@ -1,34 +1,47 @@
 name: CI Pipeline
-
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
 env:
   REGISTRY: ghcr.io
   IMAGE_BACKEND: ghcr.io/franck-laurel/phase1-devsecops/backend
   IMAGE_FRONTEND: ghcr.io/franck-laurel/phase1-devsecops/frontend
-
 jobs:
-  test-backend:
+
+  secret-scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect secrets with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  test-backend:
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install backend dependencies
         run: |
           cd backend
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
+      - name: Scan dependencies with pip-audit
+        run: |
+          pip install pip-audit
+          cd backend
+          pip-audit -r requirements.txt
       - name: Run backend tests
         run: |
           cd backend
@@ -43,14 +56,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push backend
         uses: docker/build-push-action@v6
         with:
@@ -58,8 +69,14 @@ jobs:
           push: true
           tags: |
             ghcr.io/franck-laurel/phase1-devsecops/backend:latest
-            ghcr.io/franck-laurel/phase1-devsecops/backend:phase2-ci
-
+            ghcr.io/franck-laurel/phase1-devsecops/backend:phase3-ci
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/franck-laurel/phase1-devsecops/backend:latest
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
       - name: Build and push frontend
         uses: docker/build-push-action@v6
         with:
@@ -67,4 +84,11 @@ jobs:
           push: true
           tags: |
             ghcr.io/franck-laurel/phase1-devsecops/frontend:latest
-            ghcr.io/franck-laurel/phase1-devsecops/frontend:phase2-ci
+            ghcr.io/franck-laurel/phase1-devsecops/frontend:phase3-ci
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/franck-laurel/phase1-devsecops/frontend:latest
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
